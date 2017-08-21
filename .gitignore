@@ -1,0 +1,7 @@
+*.json
+!*example*.json
+
+*.cson
+!*example*.csons
+
+node_modules/

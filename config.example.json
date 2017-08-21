@@ -1,0 +1,18 @@
+{
+  "global": {
+    "nick": "GusNIRCBot",
+    "prefix": "."
+  },
+  "networks": [
+    {
+      "id": "freenode",
+      "server": "irc.freenode.net",
+      "port": 6667,
+      "channels": [
+        "#botters-test"
+      ],
+      "account": "MyNewBot",
+      "password": "blahblahblahblahblah"
+    }
+  ]
+}
