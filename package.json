@@ -1,0 +1,28 @@
+{
+  "name": "gusnirc",
+  "version": "0.2.2",
+  "description": "The IRC library for Node.JS that actually works",
+  "main": "irc.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "bot": "node main.js"
+  },
+  "keywords": [
+    "irc",
+    "network",
+    "networking",
+    "client",
+    "bot"
+  ],
+  "author": "Gustavo Ramos \"Gustavo6046\" Rehermann",
+  "license": "MIT",
+  "repository": "https://github.com/Gustavo6046/GusNIRC",
+  "dependencies": {
+    "globby": "^6.1.0",
+    "node-ssh": "^4.2.3",
+    "object-path": "^0.11.4",
+    "strip-ansi": "^4.0.0",
+    "urban": "^0.3.1",
+    "url-to-title": "^1.0.6"
+  }
+}
