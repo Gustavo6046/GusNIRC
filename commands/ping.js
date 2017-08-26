@@ -4,10 +4,10 @@ var irc, ping;
 irc = require("../irc.js");
 
 ping = function(msg, custom, conn) {
-  if (custom[0] === "") {
+  if (custom[1] === "" || (custom[0] == null)) {
     return msg.reply("PONG!");
   } else {
-    return conn.send("PRIVMSG " + msg.data.privmsg.channel + " :PONG! @ " + custom[1]);
+    return msg.reply("PONG! @ " + custom[1]);
   }
 };
 

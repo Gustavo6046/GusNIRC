@@ -1,11 +1,11 @@
 irc = require("../irc.js")
 
 ping = (msg, custom, conn) ->
-    if custom[0] is ""
+    if custom[1] is "" or not custom[0]?
         msg.reply("PONG!")
 
     else
-        conn.send("PRIVMSG #{msg.data.privmsg.channel} :PONG! @ #{custom[1]}")
+        msg.reply("PONG! @ #{custom[1]}")
 
 module.exports = [{
     name: "status"

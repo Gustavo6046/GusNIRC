@@ -11,7 +11,7 @@ fs = require("fs");
 
 objpath = require("object-path");
 
-messageMatchers = [["privmsg", "(([^\!]+)\!([^@]+)@([^ ]+)) PRIVMSG (#[^ ]+) :(.+)", ["host", "nickname", "ident", "hostname", "channel", "message"]], ["join", "(([^\!]+)\!([^@]+)@([^ ]+)) JOIN (#[^ ]+).+", ["host", "nickname", "ident", "hostname", "channel"]], ["part", "(([^\!]+)\!([^@]+)@([^ ]+)) PART (#[^ ]+) :(.+)", ["host", "nickname", "ident", "hostname", "channel", "reason"]], ["notice", "(([^\!]+)\!([^@]+)@([^ ]+)) NOTICE (#[^ ]+) :(.+)", ["host", "nickname", "ident", "hostname", "channel", "message"]], ["quit", "(([^\!]+)\!([^@]+)@([^ ]+)) QUIT :(.+)", ["host", "nickname", "ident", "hostname", "reason"]], ["ping", "PING :(.+)", ["server"]]];
+messageMatchers = [["privmsg", "(([^\!]+)\!([^@]+)@([^ ]+)) PRIVMSG ([^ ]+) :(.+)", ["host", "nickname", "ident", "hostname", "channel", "message"]], ["join", "(([^\!]+)\!([^@]+)@([^ ]+)) JOIN (#[^ ]+).+", ["host", "nickname", "ident", "hostname", "channel"]], ["part", "(([^\!]+)\!([^@]+)@([^ ]+)) PART (#[^ ]+) :(.+)", ["host", "nickname", "ident", "hostname", "channel", "reason"]], ["notice", "(([^\!]+)\!([^@]+)@([^ ]+)) NOTICE (#[^ ]+) :(.+)", ["host", "nickname", "ident", "hostname", "channel", "message"]], ["quit", "(([^\!]+)\!([^@]+)@([^ ]+)) QUIT :(.+)", ["host", "nickname", "ident", "hostname", "reason"]], ["ping", "PING :(.+)", ["server"]]];
 
 IRCMessage = (function() {
   function IRCMessage(conn, raw1) {
@@ -46,7 +46,11 @@ IRCMessage = (function() {
     ref = (message + '').split("\n");
     for (j = 0, len = ref.length; j < len; j++) {
       l = ref[j];
-      this.conn.send("PRIVMSG " + this.data.privmsg.channel + " :" + l);
+      if (this.data.privmsg.channel === this.conn.bot.nick) {
+        this.conn.send("PRIVMSG " + this.data.privmsg.nickname + " :" + l);
+      } else {
+        this.conn.send("PRIVMSG " + this.data.privmsg.channel + " :" + l);
+      }
     }
     return true;
   };
@@ -105,7 +109,7 @@ PrefixedMatcher = (function(superClass) {
 
   PrefixedMatcher.prototype.match = function(raw, command, connection) {
     var groups, m, matchstr;
-    matchstr = "[^\\!]+![^@]+@[^ ]+ PRIVMSG #[^ ]+ :" + ((this.prefix + '').replace(/[.?*+^$[\]\\(){}|-]/g, "\\$&")) + this.regexStr;
+    matchstr = "[^\\!]+![^@]+@[^ ]+ PRIVMSG [^ ]+ :" + ((this.prefix + '').replace(/[.?*+^$[\]\\(){}|-]/g, "\\$&")) + this.regexStr;
     this.exp = RegExp(matchstr, (this.regexFlags != null ? this.regexFlags : "i"));
     m = raw.match(this.exp);
     if (m != null) {
@@ -136,7 +140,6 @@ Command = (function() {
     this.lastParsed = raw;
     m = this.matcher.match(raw, this, connection);
     if (m != null) {
-      connection.log("Executing " + this.name);
       return this.perform(message, m.slice(1), connection);
     } else {
       return null;

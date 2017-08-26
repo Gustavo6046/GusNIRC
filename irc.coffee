@@ -9,7 +9,7 @@ fs = require("fs")
 objpath = require("object-path")
 
 messageMatchers = [
-    ["privmsg", "(([^\!]+)\!([^@]+)@([^ ]+)) PRIVMSG (#[^ ]+) :(.+)", ["host", "nickname", "ident", "hostname", "channel", "message"]]
+    ["privmsg", "(([^\!]+)\!([^@]+)@([^ ]+)) PRIVMSG ([^ ]+) :(.+)", ["host", "nickname", "ident", "hostname", "channel", "message"]]
     ["join", "(([^\!]+)\!([^@]+)@([^ ]+)) JOIN (#[^ ]+).+", ["host", "nickname", "ident", "hostname", "channel"]]
     ["part", "(([^\!]+)\!([^@]+)@([^ ]+)) PART (#[^ ]+) :(.+)", ["host", "nickname", "ident", "hostname", "channel", "reason"]]
     ["notice", "(([^\!]+)\!([^@]+)@([^ ]+)) NOTICE (#[^ ]+) :(.+)", ["host", "nickname", "ident", "hostname", "channel", "message"]]
@@ -40,7 +40,11 @@ class IRCMessage
             return false
 
         for l in (message + '').split("\n")
-            @conn.send("PRIVMSG #{@data.privmsg.channel} :#{l}")
+            if @data.privmsg.channel is @conn.bot.nick
+                @conn.send("PRIVMSG #{@data.privmsg.nickname} :#{l}")
+
+            else
+                @conn.send("PRIVMSG #{@data.privmsg.channel} :#{l}")
 
         return true
 
@@ -66,7 +70,7 @@ class PrefixedMatcher extends MessageMatcher
     setPrefix: (@prefix) =>
 
     match: (raw, command, connection) =>
-        matchstr = "[^\\!]+![^@]+@[^ ]+ PRIVMSG #[^ ]+ :#{(@prefix+'').replace(/[.?*+^$[\]\\(){}|-]/g, "\\$&")}#{@regexStr}"
+        matchstr = "[^\\!]+![^@]+@[^ ]+ PRIVMSG [^ ]+ :#{(@prefix+'').replace(/[.?*+^$[\]\\(){}|-]/g, "\\$&")}#{@regexStr}"
         @exp = RegExp(matchstr, (if @regexFlags? then @regexFlags else "i"))
 
         m = raw.match(@exp)
@@ -88,8 +92,6 @@ class Command
         m = @matcher.match(raw, @, connection)
 
         if m?
-            connection.log("Executing #{@name}")
-
             return @perform(message, m.slice(1), connection)
 
         else
