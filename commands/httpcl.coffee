@@ -61,11 +61,35 @@ module.exports = [
     }
 
     {
+        name: "http.aliasdata"
+        matcher: new irc.PrefixedMatcher("http add(?:default|extra)?data ([^ ]+) (.+)")
+
+        perform: (msg, custom, conn) ->
+            data = custom[1].split("|")
+            data[1] = data.slice(1).join("|")
+            data = data.map((x) -> x.trim())
+
+            postAliases[custom[0]].extraData[data[0]] = JSON.parse(data[1])
+
+            msg.reply("Added extra data field '#{data[0]}' to alias '#{custom[0]}'.")
+    }
+
+    {
+        name: "http.delalias"
+        matcher: new irc.PrefixedMatcher("http del(?:alias)? ([^ ]+)")
+
+        perform: (msg, custom, conn) ->
+            postAliases[custom[0]] = undefined
+
+            msg.reply("Deleted alias #{custom[0]} successfully.")
+    }
+
+    {
         name: "http.alias"
         matcher: new irc.PrefixedMatcher("http (?:add|alias|addalias) ([^ ]+) ([^ ]+) ([^ ]+) (.+)")
 
         perform: (msg, custom, conn) ->
-            data = custom[3].split("|").trim()
+            data = custom[3].split("|").map((x) -> x.trim())
 
             if custom[0] in Object.prototype.keys(postAliases)
                 msg.reply("HTTP alias already exists!")
