@@ -69,7 +69,7 @@ CommandMatcher = (function() {
 
   CommandMatcher.prototype.match = function(raw, command, connection) {
     if (raw.match(this.exp) != null) {
-      return this.exp.exec(raw).slice(1);
+      return this.exp.exec(raw);
     } else {
       return null;
     }
@@ -125,10 +125,11 @@ PrefixedMatcher = (function(superClass) {
 })(MessageMatcher);
 
 Command = (function() {
-  function Command(name, matcher, perform) {
+  function Command(name, matcher, perform, bot1) {
     this.name = name;
     this.matcher = matcher;
     this.perform = perform;
+    this.bot = bot1;
     this.receive = bind(this.receive, this);
     if (typeof this.matcher === "string") {
       this.matcher = new CommandMatcher(this.matcher, "i");
@@ -136,11 +137,17 @@ Command = (function() {
   }
 
   Command.prototype.receive = function(raw, message, connection) {
-    var m;
+    var err, m;
     this.lastParsed = raw;
     m = this.matcher.match(raw, this, connection);
     if (m != null) {
-      return this.perform(message, m.slice(1), connection);
+      try {
+        return this.perform(message, m.slice(1), connection);
+      } catch (error) {
+        err = error;
+        console.log(err);
+        return message.reply(err);
+      }
     } else {
       return null;
     }
@@ -296,6 +303,7 @@ IRCConnection = (function() {
 
 IRCBot = (function() {
   function IRCBot(nick, ident, realname, queueTime, commands) {
+    var cmd, j, len, ref;
     this.nick = nick;
     this.ident = ident;
     this.realname = realname;
@@ -303,6 +311,8 @@ IRCBot = (function() {
     this.commands = commands;
     this.start = bind(this.start, this);
     this.addConnection = bind(this.addConnection, this);
+    this.reloadCommandsFolder = bind(this.reloadCommandsFolder, this);
+    this.reloadCommands = bind(this.reloadCommands, this);
     if (this.ident == null) {
       this.ident = "GusNIRC";
     }
@@ -316,7 +326,72 @@ IRCBot = (function() {
       this.realname = "A GusNIRC Bot.";
     }
     this.connections = {};
+    this.cmdNames = [];
+    this._commandModules = [];
+    this.prefix = "";
+    ref = this.commands;
+    for (j = 0, len = ref.length; j < len; j++) {
+      cmd = ref[j];
+      this.cmdNames.push(cmd.name);
+    }
   }
+
+  IRCBot.prototype.reloadCommands = function() {
+    var com, j, len, mc, mod, ref, results;
+    this.commands = [];
+    ref = this._commandModules;
+    results = [];
+    for (j = 0, len = ref.length; j < len; j++) {
+      mod = ref[j];
+      delete require.cache[require.resolve(mod)];
+      results.push((function() {
+        var k, len1, ref1, results1;
+        ref1 = require(mod);
+        results1 = [];
+        for (k = 0, len1 = ref1.length; k < len1; k++) {
+          mc = ref1[k];
+          com = new Command(mc.name, mc.matcher, mc.perform);
+          if (com.matcher instanceof PrefixedMatcher) {
+            com.matcher.setPrefix(this.prefix);
+          }
+          results1.push(this.commands.push(com));
+        }
+        return results1;
+      }).call(this));
+    }
+    return results;
+  };
+
+  IRCBot.prototype.reloadCommandsFolder = function(folder) {
+    var com, j, len, mc, mod, ref, results;
+    folder = (folder != null ? folder : "commands");
+    this.commands = [];
+    ref = fs.readdirSync(folder).filter(function(fn) {
+      return fn.endsWith(".js");
+    }).map(function(fn) {
+      return "./" + folder + "/" + fn;
+    });
+    results = [];
+    for (j = 0, len = ref.length; j < len; j++) {
+      mod = ref[j];
+      delete require.cache[require.resolve(mod)];
+      results.push((function() {
+        var k, len1, ref1, results1;
+        ref1 = require(mod);
+        results1 = [];
+        for (k = 0, len1 = ref1.length; k < len1; k++) {
+          mc = ref1[k];
+          com = new Command(mc.name, mc.matcher, mc.perform);
+          if (com.matcher instanceof PrefixedMatcher) {
+            com.matcher.setPrefix(this.prefix);
+          }
+          results1.push(this.commands.push(com));
+        }
+        return results1;
+      }).call(this));
+    }
+    return results;
+  };
 
   IRCBot.parseConfig = function(config, commandModules) {
     var bot, c, cmds, com, j, k, len, len1, len2, mc, mod, n, ref;
@@ -334,6 +409,8 @@ IRCBot = (function() {
       }
     }
     bot = new IRCBot(config.global.nick, config.global.ident, config.global.realname, config.global.queueTime * 1000, cmds);
+    bot._commandModules = commandModules;
+    bot.prefix = config.global.prefix;
     ref = config.networks;
     for (n = 0, len2 = ref.length; n < len2; n++) {
       c = ref[n];

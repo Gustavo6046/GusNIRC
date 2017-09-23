@@ -54,7 +54,7 @@ class CommandMatcher
 
     match: (raw, command, connection) =>
         if raw.match(@exp)?
-            return @exp.exec(raw).slice(1)
+            return @exp.exec(raw)
 
         else
             return null
@@ -83,7 +83,7 @@ class PrefixedMatcher extends MessageMatcher
             return null
 
 class Command
-    constructor: (@name, @matcher, @perform) ->
+    constructor: (@name, @matcher, @perform, @bot) ->
         if typeof @matcher == "string"
             @matcher = new CommandMatcher(@matcher, "i")
 
@@ -92,7 +92,12 @@ class Command
         m = @matcher.match(raw, @, connection)
 
         if m?
-            return @perform(message, m.slice(1), connection)
+            try
+                return @perform(message, m.slice(1), connection)
+
+            catch err
+                console.log(err)
+                message.reply(err)
 
         else
             return null
@@ -203,6 +208,42 @@ class IRCBot
         if not @realname? then @realname = "A GusNIRC Bot."
 
         @connections = {}
+        @cmdNames = []
+        @_commandModules = []
+        @prefix = ""
+
+        for cmd in @commands
+            @cmdNames.push(cmd.name)
+    
+    reloadCommands: () =>
+        @commands = []
+
+        for mod in @_commandModules
+            delete require.cache[require.resolve(mod)]
+
+            for mc in require(mod)
+                com = new Command(mc.name, mc.matcher, mc.perform)
+
+                if com.matcher instanceof PrefixedMatcher
+                    com.matcher.setPrefix(@prefix)
+
+                @commands.push(com)
+
+    reloadCommandsFolder: (folder) =>
+        folder = (if folder? then folder else "commands")
+
+        @commands = []
+
+        for mod in fs.readdirSync(folder).filter((fn) -> fn.endsWith(".js")).map((fn) -> "./#{folder}/#{fn}")
+            delete require.cache[require.resolve(mod)]
+
+            for mc in require(mod)
+                com = new Command(mc.name, mc.matcher, mc.perform)
+
+                if com.matcher instanceof PrefixedMatcher
+                    com.matcher.setPrefix(@prefix)
+
+                @commands.push(com)
 
     @parseConfig: (config, commandModules) ->
         cmds = []
@@ -219,6 +260,8 @@ class IRCBot
                 cmds.push(com)
 
         bot = new IRCBot(config.global.nick, config.global.ident, config.global.realname, config.global.queueTime * 1000, cmds)
+        bot._commandModules = commandModules
+        bot.prefix = config.global.prefix
 
         for c in config.networks
             bot.addConnection(c.id, c.server, c.port, c.account, c.password, c.channels)

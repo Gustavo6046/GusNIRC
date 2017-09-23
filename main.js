@@ -12,7 +12,7 @@ main = function() {
   }).map(function(fn) {
     return "./commands/" + fn;
   });
-  bot = irc.IRCBot.parseConfig(JSON.parse(fs.readFileSync("config.json")), commandFiles);
+  bot = irc.IRCBot.parseConfig(JSON.parse(fs.readFileSync((process.argv.length > 2 ? process.argv[2] : "config.json"))), commandFiles);
   return bot.start();
 };
 

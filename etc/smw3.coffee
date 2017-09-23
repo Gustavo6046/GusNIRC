@@ -335,6 +335,9 @@ class SMWGame
         return @gametype.initPlayer(player)
 
     @findGame: (conn, channel) ->
+        if not games[conn]?
+            return false
+
         return games[conn][channel]
 
 class SMWPlayer

@@ -413,6 +413,9 @@ SMWGame = (function() {
   };
 
   SMWGame.findGame = function(conn, channel) {
+    if (games[conn] == null) {
+      return false;
+    }
     return games[conn][channel];
   };
 
