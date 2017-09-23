@@ -1,6 +1,6 @@
 {
   "name": "gusnirc",
-  "version": "0.2.3",
+  "version": "0.2.4-0",
   "description": "The IRC library for Node.JS that actually works",
   "main": "irc.js",
   "scripts": {
